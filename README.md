@@ -7,10 +7,10 @@ This reference is designed to work with **AI coding assistants** like [Claude](h
 ## What's Covered
 
 - **Documents** — list, start/stop shows, get program output
-- **Layers & Variants** — toggle live, modify parameters, cycle variants, trigger signals
-- **Sources** — list, modify, preview images, media control
-- **Output Destinations** — file recording, RTMP streaming, NDI, fullscreen
-- **Layer Sets** — recall preset layer configurations
+- **Layers & Variants** — create/delete layers, toggle live, modify parameters, cycle variants, trigger signals
+- **Sources** — create/delete sources, modify, preview images, media control
+- **Output Destinations** — create/delete, file recording, RTMP streaming, NDI, fullscreen, and more
+- **Layer Sets** — create, update, delete, and recall preset layer configurations
 - **Data Stores** — focus/unfocus rows, trigger signals
 - **Devices** — list available video/audio devices
 - **Zoom Meetings** — join/leave, participants, source assignment, 20+ meeting actions
@@ -55,6 +55,11 @@ curl http://localhost:8989/api/v1/documents/{DocID}/setLive
 
 # Toggle a layer
 curl http://localhost:8989/api/v1/documents/{DocID}/layers/{LayerID}/toggleLive
+
+# Create a live-streaming output destination
+curl -X POST -H "Content-Type: application/vnd.api+json" \
+  -d '{"data": {"attributes": {"output-destination-type": "com.boinx.mimoLive.outputDestination.liveStreaming", "settings": {"rtmpurl": "rtmp://...", "streamingkey": "your-key"}}}}' \
+  http://localhost:8989/api/v1/documents/{DocID}/output-destinations
 
 # Join a Zoom meeting
 curl "http://localhost:8989/api/v1/zoom/join?meetingid=123456789&displayname=mimoLive"

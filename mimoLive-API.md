@@ -77,8 +77,10 @@ curl http://localhost:8989/api/v1/documents/{DocID}/layers/{LayerID}/toggleLive
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/documents/{DocID}/layers` | List all layers in a document |
+| POST | `/documents/{DocID}/layers` | Create a new layer |
 | GET | `/documents/{DocID}/layers/{LayerID}` | Single layer |
 | PUT | `/documents/{DocID}/layers/{LayerID}` | Modify layer attributes (omit unchanged values) |
+| DELETE | `/documents/{DocID}/layers/{LayerID}` | Delete a layer (returns 204) |
 | GET\|POST | `.../layers/{LayerID}/setLive` | Switch layer live |
 | GET\|POST | `.../layers/{LayerID}/setOff` | Switch layer off |
 | GET\|POST | `.../layers/{LayerID}/toggleLive` | Toggle layer on/off |
@@ -88,6 +90,15 @@ curl http://localhost:8989/api/v1/documents/{DocID}/layers/{LayerID}/toggleLive
 | GET\|POST | `.../layers/{LayerID}/setLiveFirstVariant` | Activate first variant |
 | GET\|POST | `.../layers/{LayerID}/setLiveLastVariant` | Activate last variant |
 | GET\|POST | `.../layers/{LayerID}/inputs/{SourceInputKey}/mediacontrol/{Command}` | Media playback control |
+
+**Creating a layer (POST):** Provide the `composition-id` of the layer type and optional initial attributes:
+```bash
+curl -X POST \
+  -H "Content-Type: application/vnd.api+json" \
+  -d '{"data": {"attributes": {"composition-id": "com.boinx.layer.lowerThird", "input-values": {"tvIn_Title": "John Doe"}}}}' \
+  http://localhost:8989/api/v1/documents/{DocID}/layers
+```
+Returns **201 Created** with the new layer representation.
 
 **Layer attributes:**
 ```json
@@ -131,8 +142,10 @@ curl -X PUT \
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/documents/{DocID}/sources` | List all sources in a document |
+| POST | `/documents/{DocID}/sources` | Create a new source |
 | GET | `.../sources/{SourceID}` | Single source (includes sideloaded filters) |
 | PUT | `.../sources/{SourceID}` | Modify source attributes |
+| DELETE | `.../sources/{SourceID}` | Delete a source (returns 204) |
 | GET | `.../sources/{SourceID}/preview` | Source preview image |
 | GET\|POST | `.../sources/{SourceID}/mediacontrol/{Command}` | Media playback control |
 | GET\|POST | `.../sources/{SourceID}/signals/{SignalID}` | Trigger signal on source |
@@ -168,6 +181,15 @@ curl -X PUT \
 
 **Tally states:** `off`, `preview`, `program`, `in-use`
 
+**Creating a source (POST):** Provide the `source-type` identifier and optional `settings` for the source type:
+```bash
+curl -X POST \
+  -H "Content-Type: application/vnd.api+json" \
+  -d '{"data": {"attributes": {"source-type": "com.boinx.boinxtv.source.qrcode", "settings": {"tvGroup_Content__QR_Content": "https://example.com"}}}}' \
+  http://localhost:8989/api/v1/documents/{DocID}/sources
+```
+Returns **201 Created** with the new source representation.
+
 ### Filters
 
 | Method | Endpoint | Description |
@@ -182,8 +204,10 @@ curl -X PUT \
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/documents/{DocID}/output-destinations` | List output destinations |
+| POST | `/documents/{DocID}/output-destinations` | Create a new output destination |
 | GET | `.../output-destinations/{OutputID}` | Single output destination |
-| PUT | `.../output-destinations/{OutputID}` | Modify output destination settings |
+| PUT\|PATCH | `.../output-destinations/{OutputID}` | Modify output destination settings |
+| DELETE | `.../output-destinations/{OutputID}` | Delete an output destination (returns 204) |
 | GET\|POST | `.../output-destinations/{OutputID}/setLive` | Start output |
 | GET\|POST | `.../output-destinations/{OutputID}/setOff` | Stop output |
 | GET\|POST | `.../output-destinations/{OutputID}/toggleLive` | Toggle output |
@@ -192,6 +216,7 @@ curl -X PUT \
 ```json
 {
   "title": "File Recording",
+  "output-destination-type": "com.boinx.mimoLive.outputDestination.fileRecording",
   "type": "File Recording",
   "live-state": "off",
   "ready-to-go-live": true,
@@ -205,11 +230,32 @@ curl -X PUT \
 }
 ```
 
-**Output destination types:** File Recording, Live Streaming (RTMP), NDI, Fullscreen
+**Known output destination types:**
+| output-destination-type | Description |
+|-------------------------|-------------|
+| `com.boinx.mimoLive.outputDestination.fileRecording` | File Recording |
+| `com.boinx.mimoLive.outputDestination.liveStreaming` | Live Streaming (RTMP) |
+| `com.boinx.mimoLive.outputDestination.ndi` | NDI output |
+| `com.boinx.mimoLive.outputDestination.fullscreen` | Fullscreen output |
+| `com.boinx.mimoLive.outputDestination.virtualCamera` | Virtual Camera |
+| `com.boinx.mimoLive.outputDestination.mimoCall` | mimoCall (WebRTC) |
+| `com.boinx.mimoLive.outputDestination.blackmagicDesign` | Blackmagic Design playout |
+| `com.boinx.mimoLive.outputDestination.imageSequence` | Image Sequence |
+| `com.boinx.mimoLive.outputDestination.audioMonitor` | Audio Monitor |
+| `com.boinx.mimoLive.outputDestination.fileUploader` | File Uploader |
+
+**Creating an output destination (POST):**
+```bash
+curl -X POST \
+  -H "Content-Type: application/vnd.api+json" \
+  -d '{"data": {"attributes": {"output-destination-type": "com.boinx.mimoLive.outputDestination.liveStreaming", "title": "My Stream", "settings": {"rtmpurl": "rtmp://fb.live/1234567", "streamingkey": "abcdefghijk"}}}}' \
+  http://localhost:8989/api/v1/documents/{DocID}/output-destinations
+```
+Returns **201 Created** with the new output destination representation.
 
 **Modifying RTMP streaming settings:**
 ```bash
-curl -X PUT \
+curl -X PATCH \
   -H "Content-Type: application/vnd.api+json" \
   -d '{"data": {"attributes": {"settings": {"rtmpurl": "rtmp://stream.example.com/live", "streamingkey": "your-key"}}}}' \
   http://localhost:8989/api/v1/documents/{DocID}/output-destinations/{OutputID}
@@ -220,10 +266,55 @@ curl -X PUT \
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/documents/{DocID}/layer-sets` | List layer sets |
+| POST | `/documents/{DocID}/layer-sets` | Create a new layer set |
 | GET | `.../layer-sets/{LayerSetID}` | Single layer set |
+| PUT\|PATCH | `.../layer-sets/{LayerSetID}` | Update a layer set |
+| DELETE | `.../layer-sets/{LayerSetID}` | Delete a layer set (returns 204) |
 | GET\|POST | `.../layer-sets/{LayerSetID}/recall` | Recall/activate a layer set |
 
 Layer sets allow you to set the live state of multiple layers at once.
+
+**Layer set attributes:**
+```json
+{
+  "name": "Intro Scene",
+  "active": false,
+  "recall-on-show-start": true,
+  "recall-on-show-end": false,
+  "layers": [
+    { "layer-id": "{LayerID}", "action": "live", "variant": "edit-variant" },
+    { "layer-id": "{LayerID}", "action": "live", "variant": "{VariantID}" },
+    { "layer-id": "{LayerID}", "action": "off" },
+    { "layer-id": "{LayerID}", "action": "force-off" }
+  ]
+}
+```
+
+**Layer set member actions:**
+| action | variant required | Meaning |
+|--------|-----------------|---------|
+| `live` | yes | Switch layer live with the given variant |
+| `off` | no | Switch layer off (allows shutdown animation) |
+| `force-off` | no | Force layer off immediately |
+
+**variant values:** `"edit-variant"` (the layer's current edit variant) or a specific `{VariantID}`.
+
+**Creating a layer set (POST):**
+```bash
+curl -X POST \
+  -H "Content-Type: application/vnd.api+json" \
+  -d '{"data": {"attributes": {"name": "Intro Scene", "recall-on-show-start": true, "layers": [{"layer-id": "{LayerID}", "action": "live", "variant": "edit-variant"}]}}}' \
+  http://localhost:8989/api/v1/documents/{DocID}/layer-sets
+```
+Returns **201 Created**. Omitting the body creates an empty layer set with a default name.
+
+**Updating a layer set (PATCH):** All attributes are optional — omit fields you don't want to change. Providing `layers` replaces the full member list:
+```bash
+curl -X PATCH \
+  -H "Content-Type: application/vnd.api+json" \
+  -d '{"data": {"attributes": {"name": "Updated Name", "layers": [{"layer-id": "{LayerID}", "action": "off"}]}}}' \
+  http://localhost:8989/api/v1/documents/{DocID}/layer-sets/{LayerSetID}
+```
 
 ### Data Stores (since mimoLive 6.8)
 
@@ -457,17 +548,18 @@ Used across documents, layers, variants, and output destinations:
 ## Important Gotchas
 
 1. **PATCH uses short source path** — `PATCH /api/v1/sources/{SourceID}` works, NOT necessarily nested under `/documents/{DocID}/sources/...`
-2. **Content-Type matters** — PUT/PATCH requests need `Content-Type: application/vnd.api+json`
-3. **Zoom endpoints use GET** — `zoom/leave`, `zoom/join`, `zoom/end` all accept GET (not just POST)
-4. **Meeting actions are GET** — `zoom/meetingaction?command=...` is a GET request
-5. **Zoom user IDs are numeric** — e.g., `16786432`, not strings
-6. **409 when not in a meeting** — ALL `meetingaction` commands return 409 Conflict when not in a meeting
-7. **No meeting settings query** — There's no endpoint to read current meeting-wide settings (mute state, lock state, etc.). Actions are fire-and-forget only. Per-participant state is available via `/zoom/participants`
-8. **Source IDs include DocID** — Source IDs are formatted as `{DocID}-{UUID}`
-9. **Username resolution is async** — After assigning a Zoom participant to a source, the `zoom-username` updates asynchronously (~500ms). Re-fetch to see the updated name
-10. **Layer/source IDs are stable** — As long as you don't delete and recreate them, IDs persist across sessions. Reordering layers/sources does not change IDs
-11. **Right-click for API URLs** — In the mimoLive UI, right-click any element and select "Copy API Endpoint" to get its exact URL
-12. **Enable HTTP Server** — The API must be enabled in mimoLive's Preferences > Remote Control
+2. **Content-Type matters** — POST/PUT/PATCH requests need `Content-Type: application/vnd.api+json`
+3. **POST returns 201, DELETE returns 204** — Creating resources returns 201 Created with the new object; deleting returns 204 No Content with an empty body
+4. **Zoom endpoints use GET** — `zoom/leave`, `zoom/join`, `zoom/end` all accept GET (not just POST)
+5. **Meeting actions are GET** — `zoom/meetingaction?command=...` is a GET request
+6. **Zoom user IDs are numeric** — e.g., `16786432`, not strings
+7. **409 when not in a meeting** — ALL `meetingaction` commands return 409 Conflict when not in a meeting
+8. **No meeting settings query** — There's no endpoint to read current meeting-wide settings (mute state, lock state, etc.). Actions are fire-and-forget only. Per-participant state is available via `/zoom/participants`
+9. **Source IDs include DocID** — Source IDs are formatted as `{DocID}-{UUID}`
+10. **Username resolution is async** — After assigning a Zoom participant to a source, the `zoom-username` updates asynchronously (~500ms). Re-fetch to see the updated name
+11. **Layer/source IDs are stable** — As long as you don't delete and recreate them, IDs persist across sessions. Reordering layers/sources does not change IDs
+12. **Right-click for API URLs** — In the mimoLive UI, right-click any element and select "Copy API Endpoint" to get its exact URL
+13. **Enable HTTP Server** — The API must be enabled in mimoLive's Preferences > Remote Control
 
 ---
 
