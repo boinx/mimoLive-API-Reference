@@ -22,7 +22,18 @@ This reference is designed to work with **AI coding assistants** like [Claude](h
 
 ## Quick Start
 
-### With Claude Code
+### As a Claude Code plugin (recommended)
+
+Install the reference as a plugin from its own public marketplace. The `mimolive-http-api` skill then loads automatically whenever you work on a mimoLive integration:
+
+```
+/plugin marketplace add boinx/mimoLive-API-Reference
+/plugin install mimolive-api@mimolive
+```
+
+The plugin version tracks the mimoLive release line (e.g. `6.19.0`); run `/plugin marketplace update mimolive` to pull the latest. This marketplace is public and independent of any other marketplaces you have installed.
+
+### With Claude Code (manual)
 
 Copy the reference into your project:
 
