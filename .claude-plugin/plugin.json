@@ -1,0 +1,19 @@
+{
+  "name": "mimolive-api",
+  "description": "Control mimoLive via its HTTP API, WebSocket, and MCP endpoints.",
+  "version": "6.19.0",
+  "author": {
+    "name": "Boinx Software",
+    "url": "https://github.com/boinx"
+  },
+  "homepage": "https://github.com/boinx/mimoLive-API-Reference",
+  "repository": "https://github.com/boinx/mimoLive-API-Reference",
+  "license": "MIT",
+  "keywords": [
+    "mimolive",
+    "http-api",
+    "livestreaming",
+    "video-production",
+    "boinx"
+  ]
+}

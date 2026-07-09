@@ -1,0 +1,17 @@
+{
+  "name": "mimolive",
+  "metadata": {
+    "description": "Public reference and Skill for the mimoLive HTTP API, WebSocket, and MCP endpoints."
+  },
+  "owner": {
+    "name": "Boinx Software",
+    "url": "https://github.com/boinx"
+  },
+  "plugins": [
+    {
+      "name": "mimolive-api",
+      "source": "./",
+      "description": "Teaches the complete mimoLive HTTP API — endpoints, WebSocket events, MCP, and gotchas — for building integrations and automations."
+    }
+  ]
+}
