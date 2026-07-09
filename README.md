@@ -6,15 +6,18 @@ This reference is designed to work with **AI coding assistants** like [Claude](h
 
 ## What's Covered
 
-- **Documents** — list, start/stop shows, get program output
+- **Documents** — list, modify, start/stop shows, get program output, control the built-in record/stream/playout/fullscreen outputs
 - **Layers & Variants** — create/delete layers, toggle live, modify parameters, cycle variants, trigger signals
-- **Sources** — create/delete sources, modify, preview images, media control
+- **Sources** — create/delete, modify, preview images, media control, signals, and source-type actions
 - **Output Destinations** — create/delete, file recording, RTMP streaming, NDI, fullscreen, and more
 - **Layer Sets** — create, update, delete, and recall preset layer configurations
-- **Data Stores** — focus/unfocus rows, trigger signals
+- **Data Stores** — store, read, and delete raw per-document blobs
+- **Types** — discover layer / source / output-destination type identifiers and their parameters
 - **Devices** — list available video/audio devices
+- **Comments** — inject comments into the live comment system
 - **Zoom Meetings** — join/leave, participants, source assignment, 20+ meeting actions
 - **WebSocket** — real-time state change events with connection examples
+- **MCP** — native Model Context Protocol endpoint for AI agents
 - **mlController Proxy** — simplified API on port 8990 with optional auth
 
 ## Quick Start

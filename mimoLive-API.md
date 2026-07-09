@@ -36,10 +36,12 @@ curl http://localhost:8989/api/v1/documents/{DocID}/layers/{LayerID}/toggleLive
 |--------|----------|-------------|
 | GET | `/documents` | List all open documents |
 | GET | `/documents/{DocID}` | Single document (includes sideloaded layers, sources, output-destinations) |
+| PUT\|PATCH | `/documents/{DocID}` | Modify document attributes (`name`, `programOutputMasterVolume`, `metadata`) |
 | GET | `/documents/{DocID}/programOut` | Current program output as an image |
 | GET\|POST | `/documents/{DocID}/setLive` | Start the show |
 | GET\|POST | `/documents/{DocID}/setOff` | Stop the show |
 | GET\|POST | `/documents/{DocID}/toggleLive` | Toggle show on/off |
+| GET\|POST | `/documents/{DocID}/outputs/{OutputID}/{action}` | Start/stop a built-in output (see below) |
 
 **Document attributes:**
 ```json
@@ -71,6 +73,16 @@ curl http://localhost:8989/api/v1/documents/{DocID}/layers/{LayerID}/toggleLive
 ```
 
 **Document relationships:** `sources`, `layers`, `output-destinations`, `layer-sets`
+
+**Controlling the built-in outputs:** The four built-in outputs in the `outputs` array — `record`, `stream`, `playout`, `fullscreen` — are started/stopped with `GET|POST /documents/{DocID}/outputs/{OutputID}/{action}`, where `{action}` is `setLive` (start) or `setOff` (stop).
+
+> ⚠️ **Any other `{action}` value toggles.** An unrecognized action (including `toggleLive` or a typo) falls through to a start/stop toggle — it will *start* a stopped output. Use the explicit `setLive` / `setOff`.
+
+```bash
+# Start recording; stop streaming
+curl http://localhost:8989/api/v1/documents/{DocID}/outputs/record/setLive
+curl http://localhost:8989/api/v1/documents/{DocID}/outputs/stream/setOff
+```
 
 ### Layers
 
@@ -134,6 +146,7 @@ curl -X PUT \
 | GET\|POST | `.../variants/{VariantID}/setLive` | Activate variant (also makes layer live) |
 | GET\|POST | `.../variants/{VariantID}/setOff` | Deactivate variant (also turns layer off) |
 | GET\|POST | `.../variants/{VariantID}/toggleLive` | Toggle variant |
+| GET\|POST | `.../variants/{VariantID}/signals/{SignalID}` | Trigger a signal on a variant |
 
 **Variant attributes:** Same as layer (`live-state`, `input-descriptions`, `input-values`). Relationships: `layer`.
 
@@ -149,6 +162,8 @@ curl -X PUT \
 | GET | `.../sources/{SourceID}/preview` | Source preview image |
 | GET\|POST | `.../sources/{SourceID}/mediacontrol/{Command}` | Media playback control |
 | GET\|POST | `.../sources/{SourceID}/signals/{SignalID}` | Trigger signal on source |
+| GET\|POST | `.../sources/{SourceID}/actions/{ActionName}` | Run a source-type action (409 if unavailable for that source) |
+| GET | `.../sources/{SourceID}/openwebbrowser` | Open the web-capture browser window (Web Page source) |
 
 **Common source attributes (all types):**
 ```json
@@ -181,6 +196,8 @@ curl -X PUT \
 
 **Tally states:** `off`, `preview`, `program`, `in-use`
 
+**Source actions** (`.../actions/{ActionName}`) are source-type-specific — e.g. SRT sources start/stop the SRT service, mimoCall (WebRTC) sources expose a `reconnect` action. Requesting an action a source doesn't support returns `409 Operation not allowed`. `openwebbrowser` opens the browser window of a Web Page source.
+
 **Creating a source (POST):** Provide the `source-type` identifier and optional `settings` for the source type:
 ```bash
 curl -X POST \
@@ -210,7 +227,6 @@ Returns **201 Created** with the new source representation.
 | DELETE | `.../output-destinations/{OutputID}` | Delete an output destination (returns 204) |
 | GET\|POST | `.../output-destinations/{OutputID}/setLive` | Start output |
 | GET\|POST | `.../output-destinations/{OutputID}/setOff` | Stop output |
-| GET\|POST | `.../output-destinations/{OutputID}/toggleLive` | Toggle output |
 
 **Output destination attributes:**
 ```json
@@ -318,15 +334,23 @@ curl -X PATCH \
 
 ### Data Stores (since mimoLive 6.8)
 
+A data store is a per-document key-value slot holding a **single raw blob** with its own content type — not a JSON:API resource, and not a table of rows. Use it to stash arbitrary data (JSON, text, an image…) alongside a document and get change notifications over the WebSocket.
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/documents/{DocID}/datastores` | List data stores |
-| GET | `.../datastores/{DataStoreID}` | Single data store (includes rows) |
-| GET | `.../datastores/{DataStoreID}/rows` | List rows |
-| GET\|POST | `.../rows/{RowID}/focus` | Focus a row |
-| GET\|POST | `.../rows/{RowID}/unfocus` | Unfocus a row |
-| GET\|POST | `.../rows/{RowID}/toggleFocus` | Toggle row focus |
-| GET\|POST | `.../rows/{RowID}/signal` | Trigger signal on a row |
+| GET | `.../datastores/{StoreID}` | Return the stored blob with its saved `Content-Type` (404 if unset) |
+| PUT | `.../datastores/{StoreID}` | Create or replace the blob — the raw request body is stored verbatim with its `Content-Type` |
+| DELETE | `.../datastores/{StoreID}` | Delete the blob (returns 204) |
+
+`GET`/`PUT` transfer the **raw body** (whatever `Content-Type` you send or stored), *not* a JSON:API envelope. Writes and deletes emit a `datastores` event on the WebSocket.
+
+```bash
+# Store a JSON blob under the key "scoreboard", then read it back
+curl -X PUT -H "Content-Type: application/json" \
+  -d '{"home": 3, "away": 1}' \
+  http://localhost:8989/api/v1/documents/{DocID}/datastores/scoreboard
+curl http://localhost:8989/api/v1/documents/{DocID}/datastores/scoreboard
+```
 
 ### Devices
 
@@ -348,6 +372,48 @@ curl -X PATCH \
 ```
 
 **Device types:** `com.boinx.devicetype.avfoundation` (local), `com.boinx.devicetype.ndi` (NDI network)
+
+### Types (Layer / Source / Output Destination catalogs)
+
+Discover the type identifiers — and their available parameters — that the **create** (`POST`) calls above require. These are the live, complete equivalents of the hard-coded "Known types" tables elsewhere in this document.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/layertypes` | All layer types; each `id` is a `composition-id` for creating a layer |
+| GET | `/layertypes/{TypeID}` | One layer type incl. its input parameters |
+| GET | `/sourcetypes` | All source types; each `id` is a `source-type` for creating a source |
+| GET | `/sourcetypes/{TypeID}` | One source type incl. its settings |
+| GET | `/outputdestinationtypes` | All output-destination types |
+| GET | `/outputdestinationtypes/{TypeID}` | One output-destination type incl. its settings |
+
+### Comments
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET\|POST | `/comments/new` | **Inject** a comment into mimoLive's live comment system |
+| GET | `/comments` | *Reserved — not implemented yet (returns an empty `404`).* |
+
+`comments/new` pushes an external comment *into* mimoLive (as if it had arrived from a social platform) — it is a write, not a query. Parameters (query string or form body):
+
+| Param | Default | Notes |
+|-------|---------|-------|
+| `comment` | `(No comment)` | The message text |
+| `username` | `Anonymous` | Author name |
+| `platform` | — | `facebook`, `twitter`, `youtube`, or `twitch` (sets the service icon) |
+| `date` | now | ISO-8601 timestamp |
+| `favorite` | `no` | `yes`/`true`/`1` marks it as a favorite |
+| `userimageurl` | — | URL of the author's avatar |
+
+```bash
+curl "http://localhost:8989/api/v1/comments/new?username=Jane&comment=Hello&platform=youtube"
+```
+
+### Server
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1` | API index — redirects (`302`) to `/api/v1/documents` |
+| GET | `/settings` | Server settings, e.g. `{"tracking": true}` |
 
 ---
 
@@ -412,19 +478,19 @@ Zoom participant video feeds appear as **sources** in the document (type `com.bo
 curl -X PATCH \
   -H "Content-Type: application/vnd.api+json" \
   -d '{"zoom-userid": 16786432}' \
-  http://localhost:8989/api/v1/sources/{SourceID}
+  http://localhost:8989/api/v1/documents/{DocID}/sources/{SourceID}
 
 # Set to automatic (next active speaker)
 curl -X PATCH \
   -H "Content-Type: application/vnd.api+json" \
   -d '{"zoom-userselectiontype": 2}' \
-  http://localhost:8989/api/v1/sources/{SourceID}
+  http://localhost:8989/api/v1/documents/{DocID}/sources/{SourceID}
 
 # Set to screen share
 curl -X PATCH \
   -H "Content-Type: application/vnd.api+json" \
   -d '{"zoom-userselectiontype": 6}' \
-  http://localhost:8989/api/v1/sources/{SourceID}
+  http://localhost:8989/api/v1/documents/{DocID}/sources/{SourceID}
 ```
 
 **Zoom selection types:**
@@ -519,6 +585,24 @@ ws.onclose = () => {
 
 ---
 
+## Model Context Protocol (MCP)
+
+**Endpoint:** `http://localhost:8989/mcp` — note the **root path**, *not* under `/api/v1`.
+
+mimoLive also exposes a native **[MCP](https://modelcontextprotocol.io/) server** over the Streamable HTTP transport, so MCP-capable agents can drive mimoLive through tools instead of raw REST. It complements — and is separate from — the REST API above.
+
+| Method | Purpose |
+|--------|---------|
+| POST | JSON-RPC 2.0 messages (`initialize`, `tools/list`, `tools/call`, …) |
+| GET | Opens the SSE stream for server→client messages (returns `405` until a session exists) |
+| DELETE | End the MCP session |
+
+After `initialize`, send the returned `Mcp-Session-Id` header on every subsequent request. Without it, calls fail with `{"error": {"code": -32000, "message": "Missing or unknown Mcp-Session-Id"}}`.
+
+> This endpoint is new and evolving; the available tool set expands across releases. Call `tools/list` to see what the running build offers.
+
+---
+
 ## Sparse Filtering
 
 Reduce API response size with query parameters:
@@ -547,7 +631,7 @@ Used across documents, layers, variants, and output destinations:
 
 ## Important Gotchas
 
-1. **PATCH uses short source path** — `PATCH /api/v1/sources/{SourceID}` works, NOT necessarily nested under `/documents/{DocID}/sources/...`
+1. **Source writes use the nested path** — modify a source at `PATCH /api/v1/documents/{DocID}/sources/{SourceID}`. There is **no** short `/api/v1/sources/{SourceID}` route (it returns an empty `404`). Source IDs embed the DocID as `{DocID}-{UUID}`, but you must still address them under `/documents/{DocID}/...`.
 2. **Content-Type matters** — POST/PUT/PATCH requests need `Content-Type: application/vnd.api+json`
 3. **POST returns 201, DELETE returns 204** — Creating resources returns 201 Created with the new object; deleting returns 204 No Content with an empty body
 4. **Zoom endpoints use GET** — `zoom/leave`, `zoom/join`, `zoom/end` all accept GET (not just POST)
@@ -560,6 +644,8 @@ Used across documents, layers, variants, and output destinations:
 11. **Layer/source IDs are stable** — As long as you don't delete and recreate them, IDs persist across sessions. Reordering layers/sources does not change IDs
 12. **Right-click for API URLs** — In the mimoLive UI, right-click any element and select "Copy API Endpoint" to get its exact URL
 13. **Enable HTTP Server** — The API must be enabled in mimoLive's Preferences > Remote Control
+14. **Built-in output actions toggle on unknown verbs** — `.../documents/{DocID}/outputs/{OutputID}/{action}` treats only `setLive`/`setOff` literally; any other value (including `toggleLive` or a typo) toggles start/stop, so a stray call can *start* a recording. Use `setLive`/`setOff` explicitly.
+15. **Output destinations have no `toggleLive`** — output-destination endpoints expose only `setLive` and `setOff` (unlike layers/variants, which do have `toggleLive`).
 
 ---
 
@@ -751,5 +837,5 @@ for s in json.load(sys.stdin)['data']:
 curl -X PATCH \
   -H "Content-Type: application/vnd.api+json" \
   -d '{"zoom-userid": 16786432}' \
-  http://localhost:8989/api/v1/sources/{SourceID}
+  http://localhost:8989/api/v1/documents/{DocID}/sources/{SourceID}
 ```
