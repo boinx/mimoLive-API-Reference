@@ -415,6 +415,34 @@ curl "http://localhost:8989/api/v1/comments/new?username=Jane&comment=Hello&plat
 | GET | `/api/v1` | API index — redirects (`302`) to `/api/v1/documents` |
 | GET | `/settings` | Server settings, e.g. `{"tracking": true}` |
 
+### Accounts (since mimoLive 6.19)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/accounts` | List the web-service accounts configured in mimoLive (Zoom, YouTube, Facebook, …) |
+
+Use this to discover the account **name** that `zoom/join` now requires (see below). The response is a JSON:API collection of `accounts` objects:
+
+```json
+{
+  "links": { "self": "/api/v1/accounts" },
+  "data": [
+    {
+      "type": "accounts",
+      "id": "{UUID}",
+      "attributes": {
+        "name": "My Work Account",
+        "account-type": "Zoom",
+        "identifier": "…",
+        "email": "me@example.com"
+      }
+    }
+  ]
+}
+```
+
+`identifier` and `email` appear only when known. Pass the `name` value as `zoomaccountname` when joining a Zoom meeting.
+
 ---
 
 ## Zoom Meeting Endpoints
@@ -435,16 +463,18 @@ These endpoints control Zoom meetings integrated into mimoLive via the Zoom plug
 Query parameters (passed as URL params, not JSON body):
 ```
 meetingid=123456789        # Required
+zoomaccountname=MyAccount  # Required (since 6.19) — Zoom requires an account; names come from /accounts
 passcode=abc123            # Optional
 displayname=mimoLive       # Optional
-zoomaccountname=MyAccount  # Optional
 virtualcamera=true         # Optional (boolean)
 webinartoken=...           # Optional
 ```
 
+> **Since mimoLive 6.19, `zoomaccountname` is required.** Omitting it returns `400 Bad Request`. Fetch the available names from `GET /api/v1/accounts` (the `name` of each `Zoom` account).
+
 Example:
 ```bash
-curl "http://localhost:8989/api/v1/zoom/join?meetingid=123456789&displayname=mimoLive&virtualcamera=true"
+curl "http://localhost:8989/api/v1/zoom/join?meetingid=123456789&zoomaccountname=My%20Work%20Account&displayname=mimoLive&virtualcamera=true"
 ```
 
 ### Participants Response
@@ -817,7 +847,7 @@ connect();
 ### Join Zoom meeting and assign participants
 ```bash
 # Join meeting
-curl "http://localhost:8989/api/v1/zoom/join?meetingid=123456789&displayname=mimoLive&virtualcamera=true"
+curl "http://localhost:8989/api/v1/zoom/join?meetingid=123456789&zoomaccountname=My%20Work%20Account&displayname=mimoLive&virtualcamera=true"
 
 # Wait a moment for participants to appear, then list them
 sleep 3
