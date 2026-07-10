@@ -15,7 +15,8 @@ This reference is designed to work with **AI coding assistants** like [Claude](h
 - **Types** — discover layer / source / output-destination type identifiers and their parameters
 - **Devices** — list available video/audio devices
 - **Comments** — inject comments into the live comment system
-- **Zoom Meetings** — join/leave, participants, source assignment, 20+ meeting actions
+- **Accounts** — list configured web-service accounts (Zoom, YouTube, …)
+- **Zoom Meetings** — join/leave (account required), participants, source assignment, 20+ meeting actions
 - **WebSocket** — real-time state change events with connection examples
 - **MCP** — native Model Context Protocol endpoint for AI agents
 - **mlController Proxy** — simplified API on port 8990 with optional auth

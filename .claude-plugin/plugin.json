@@ -1,7 +1,7 @@
 {
   "name": "mimolive-api",
   "description": "Control mimoLive via its HTTP API, WebSocket, and MCP endpoints.",
-  "version": "6.19.0",
+  "version": "6.19b1",
   "author": {
     "name": "Boinx Software",
     "url": "https://github.com/boinx"

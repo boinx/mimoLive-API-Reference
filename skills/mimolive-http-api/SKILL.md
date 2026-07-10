@@ -1,6 +1,6 @@
 ---
 name: mimolive-http-api
-description: Control mimoLive (Boinx's macOS live video production app) through its local HTTP API, WebSocket event stream, and MCP endpoint on http://localhost:8989. Use when building integrations or automations that start/stop shows, toggle layers/variants/sources live, control recording and streaming (output destinations), read the program-output image, create layers/sources/outputs, manage Zoom meeting participants, use data stores, or subscribe to real-time state changes.
+description: Control mimoLive (Boinx's macOS live video production app) through its local HTTP API, WebSocket event stream, and MCP endpoint on http://localhost:8989. Use when building integrations or automations that start/stop shows, toggle layers/variants/sources live, control recording and streaming (output destinations), read the program-output image, create layers/sources/outputs, manage Zoom meeting participants, list configured web-service accounts, use data stores, or subscribe to real-time state changes.
 ---
 
 # mimoLive HTTP API
@@ -24,6 +24,7 @@ The complete, verified endpoint reference lives in **`mimoLive-API.md`**, next t
 - **Create things:** `POST` to `.../layers`, `.../sources`, `.../output-destinations`. Get the required type identifiers from `/layertypes`, `/sourcetypes`, `/outputdestinationtypes`.
 - **Built-in outputs:** start/stop record, stream, playout, fullscreen via `GET|POST /documents/{DocID}/outputs/{OutputID}/{action}`.
 - **Real-time:** connect to `/api/v1/socket`, send `{"event":"ping"}` every 5 s, and re-fetch a resource whenever you receive an `added`/`removed`/`changed` event for it.
+- **Accounts & Zoom:** `GET /accounts` lists the configured web-service accounts; joining a Zoom meeting requires a `zoomaccountname` (since 6.19) — read the names from `/accounts`.
 
 ## Critical gotchas
 
